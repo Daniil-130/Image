@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редактор аватарок</title>
+<style>
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #e7f0fd;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+}
+
+input, button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #007bff;
+  box-sizing: border-box;
+  transition: box-shadow 0.3s ease;
+}
+
+input[type="file"] {
+  padding: 5px;
+  cursor: pointer;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 25px;
+  background: #ddd;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #007bff;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #007bff;
+  cursor: pointer;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  box-shadow: 0 0 8px 0 #0056b3;
+}
+
+#previewContainer, #imagePreview, input, button {
+  animation: fadeInUp 0.5s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translate3d(0, 40px, 0);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+/* Дополнительные стили для улучшения визуального вида */
+#previewContainer {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+#imagePreview {
+  max-width: 100%;
+  max-height: 500px;
+  border: 5px solid #007bff;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.5);
+  border-radius: 10px;
+}
+
+.sticker {
+  position: absolute;
+  animation: popIn 0.5s ease-in-out forwards;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+</style>
+</head>
+<body>
+<div class="editor-container">
+  <h1>Редактор аватарок</h1>
+  <input type="file" id="imageInput" accept="image/*">
+  <br>
+  <button class="btn" onclick="uploadImage()">Загрузить</button>
+  <div id="previewContainer">
+    <img id="imagePreview" class="image-preview" src="" alt="Предпросмотр изображения">
+  </div>
+  <input type="number" id="widthInput" placeholder="Ширина в пикселях">
+  <input type="number" id="heightInput" placeholder="Высота в пикселях">
+  <button class="btn" onclick="resizeImage()">Изменить размер</button>
+</div>
+<label for="brightness">Яркость:</label>
+  <input type="range" id="brightness" class="slider" min="0" max="200" value="100">
+  <label for="contrast">Контрастность:</label>
+  <input type="range" id="contrast" class="slider" min="0" max="200" value="100">
+</div>
+
+<button class="btn" id="downloadBtn">Загрузить</button>
+</div>
+
+<script>
+// Получаем элементы управления и изображение
+var imagePreview = document.getElementById('imagePreview');
+var brightnessControl = document.getElementById('brightness');
+var contrastControl = document.getElementById('contrast');
+var downloadBtn = document.getElementById('downloadBtn');
+
+  function uploadImage() {
+    var input = document.getElementById('imageInput');
+    var preview = document.getElementById('imagePreview');
+    var file = input.files[0];
+    var reader = new FileReader();
+    
+    reader.onloadend = function() {
+      preview.src = reader.result;
+    }
+    
+    if (file) {
+      reader.readAsDataURL(file);
+    } else {
+      preview.src = "";
+    }
+  }
+
+  function resizeImage() {
+    var preview = document.getElementById('imagePreview');
+    var width = document.getElementById('widthInput').value;
+    var height = document.getElementById('heightInput').value;
+    
+    preview.style.width = width + 'px';
+    preview.style.height = height + 'px';
+  }
+
+  function addSticker() {
+    var file = document.getElementById('stickerInput').files[0];
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var sticker = new Image();
+      sticker.src = e.target.result;
+      sticker.className = 'sticker';
+      sticker.onload = function() {
+        document.getElementById('previewContainer').appendChild(sticker);
+        touchElement(sticker);
+      }
+    }
+    reader.readAsDataURL(file);
+  }
+
+function touchElement(element) {
+  var initialX, initialY, offsetX = 0, offsetY = 0;
+  var initialDistance = 0, scale = 1;
+  var transform = { translate: { x: 0, y: 0 }, scale: 1 };
+
+  element.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 1) {
+      // Логика для одного пальца (свайп)
+      var touch = e.touches[0];
+      initialX = touch.clientX;
+      initialY = touch.clientY;
+    } else if (e.touches.length === 2) {
+      // Логика для двух пальцев (мультитач)
+      initialDistance = getDistance(e.touches);
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  element.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 1) {
+      // Логика для одного пальца (свайп)
+      var touch = e.touches[0];
+      offsetX = touch.clientX - initialX;
+      offsetY = touch.clientY - initialY;
+      transform.translate.x += offsetX;
+      transform.translate.y += offsetY;
+      initialX = touch.clientX;
+      initialY = touch.clientY;
+      applyTransform(element);
+    } else if (e.touches.length === 2) {
+      // Логика для двух пальцев (мультитач)
+      var currentDistance = getDistance(e.touches);
+      var deltaScale = currentDistance / initialDistance;
+      transform.scale *= deltaScale;
+      initialDistance = currentDistance;
+      applyTransform(element);
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  function applyTransform(el) {
+    var transformString = 'translate(' + transform.translate.x + 'px, ' + transform.translate.y + 'px) ' +
+                          'scale(' + transform.scale + ')';
+    el.style.transform = transformString;
+  }
+
+  function getDistance(touches) {
+    var dx = touches[0].pageX - touches[1].pageX;
+    var dy = touches[0].pageY - touches[1].pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+}
+
+  brightnessControl.addEventListener('input', function() {
+    updateImageFilter();
+  });
+
+  contrastControl.addEventListener('input', function() {
+    updateImageFilter();
+  });
+
+  downloadBtn.addEventListener('click', function() {
+    downloadEditedImage();
+  });
+
+  function updateImageFilter() {
+    var brightnessValue = brightnessControl.value;
+    var contrastValue = contrastControl.value;
+    imagePreview.style.filter = 'brightness(' + brightnessValue + '%) contrast(' + contrastValue + '%)';
+  }
+
+function downloadEditedImage() {
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.crossOrigin = 'Anonymous';
+  img.onload = function() {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.filter = getComputedStyle(imagePreview).filter;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    var stickers = document.getElementsByClassName('sticker');
+    var stickerPromises = Array.from(stickers).map(sticker => {
+      return new Promise(resolve => {
+        var stickerImg = new Image();
+        stickerImg.crossOrigin = 'Anonymous';
+        stickerImg.onload = function() {
+          // Применяем трансформации стикера
+          var matrix = new WebKitCSSMatrix(window.getComputedStyle(sticker).transform);
+          ctx.translate(matrix.m41, matrix.m42);
+          ctx.scale(matrix.a, matrix.d);
+          ctx.drawImage(stickerImg, 0, 0, stickerImg.width, stickerImg.height);
+          ctx.setTransform(1, 0, 0, 1, 0, 0); // Сброс трансформаций
+          resolve();
+        };
+        stickerImg.src = sticker.src;
+      });
+    });
+
+    Promise.all(stickerPromises).then(() => {
+      canvas.toBlob(blob => {
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'edited-image.png';
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }, 'image/png');
+    });
+  };
+  img.src = imagePreview.src;
+}
+
+</script>
+</body>
+</html>
